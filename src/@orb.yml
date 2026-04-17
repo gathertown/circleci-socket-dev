@@ -1,0 +1,11 @@
+version: 2.1
+
+description: >
+  Run Socket.dev dependency and supply-chain policy checks in CircleCI using the
+  official Socket CLI (`socket ci`). Authenticate with `SOCKET_CLI_API_TOKEN`
+  (create a CI/CD API token per
+  https://docs.socket.dev/docs/create-socket-api-key-for-cicd).
+
+display:
+  home_url: "https://socket.dev"
+  source_url: "https://github.com/gathertown/circleci-socket-dev"

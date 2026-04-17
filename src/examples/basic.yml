@@ -1,0 +1,12 @@
+description: >
+  Run the `scan` job with credentials supplied through a Context.
+
+usage:
+  version: 2.1
+  orbs:
+    socket: gathertown/socket@1.0.0
+  workflows:
+    supply-chain:
+      jobs:
+        - socket/scan:
+            context: socket-dev-credentials

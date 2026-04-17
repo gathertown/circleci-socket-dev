@@ -1,0 +1,13 @@
+description: >
+  Node.js environment (cimg/node). The Socket CLI is run with npx; use a tag that
+  matches your project’s Node engine when applicable.
+
+docker:
+  - image: cimg/node:<< parameters.tag >>
+
+parameters:
+  tag:
+    type: string
+    default: current
+    description: >
+      Image tag for cimg/node (see https://hub.docker.com/r/cimg/node/tags).

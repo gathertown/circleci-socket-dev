@@ -1,0 +1,45 @@
+description: >
+  Check out the repository and run Socket CI. Configure the Socket API token as
+  `SOCKET_CLI_API_TOKEN` on the project or via a Context.
+
+executor:
+  name: default
+  tag: << parameters.node_tag >>
+
+parameters:
+  node_tag:
+    type: string
+    default: current
+    description: cimg/node tag for the job executor.
+  resource_class:
+    type: string
+    default: medium
+    description: >
+      CircleCI resource class (e.g. small, medium, large, xlarge, 2xlarge, arm.medium).
+  cli_version:
+    type: string
+    default: latest
+    description: npm `socket` package version or tag for npx.
+  auto_manifest:
+    type: boolean
+    default: false
+  app_dir:
+    type: string
+    default: .
+  org_slug:
+    type: string
+    default: ""
+  extra_args:
+    type: string
+    default: ""
+
+resource_class: << parameters.resource_class >>
+
+steps:
+  - checkout
+  - ci:
+      cli_version: << parameters.cli_version >>
+      auto_manifest: << parameters.auto_manifest >>
+      app_dir: << parameters.app_dir >>
+      org_slug: << parameters.org_slug >>
+      extra_args: << parameters.extra_args >>
