@@ -298,4 +298,4 @@ Releases are published to the [CircleCI orb registry](https://circleci.com/devel
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+This project is licensed under the MIT License. See [LICENSE](LICENSE) and [Orb Licensing](https://circleci.com/developer/orbs/licensing).
