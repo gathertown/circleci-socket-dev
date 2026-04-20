@@ -70,4 +70,17 @@ steps:
   - run:
       name: Socket Firewall (sfw)
       working_directory: << parameters.app_dir >>
+      # All dynamic values via env: included scripts must not contain `<< parameters.* >>`
+      # or bash may treat `<<` as a heredoc when substitution fails or ordering differs.
+      environment:
+        SFW_COMMAND: << parameters.sfw_command >>
+        ORB_SFW_EDITION: << parameters.sfw_edition >>
+        ORB_SFW_VERSION: << parameters.sfw_version >>
+        ORB_SFW_ENTERPRISE_VERSION: << parameters.sfw_enterprise_version >>
+        ORB_SFW_ENTERPRISE_MUSL: << parameters.sfw_enterprise_musl >>
+        ORB_SFW_CONFIG_RELATIVE_PATHS: << parameters.sfw_config_relative_paths >>
+        ORB_SFW_CUSTOM_REGISTRIES: << parameters.sfw_custom_registries >>
+        ORB_SFW_UNKNOWN_HOST_ACTION: << parameters.sfw_unknown_host_action >>
+        ORB_SFW_TELEMETRY_DISABLED: << parameters.sfw_telemetry_disabled >>
+        ORB_SFW_DEBUG: << parameters.sfw_debug >>
       command: <<include(scripts/run_sfw.sh)>>
