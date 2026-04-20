@@ -30,4 +30,10 @@ steps:
   - run:
       name: Socket CI (socket.dev)
       working_directory: << parameters.app_dir >>
+      # Dynamic values via env so the included script has no `<< parameters.* >>` (bash heredoc hazard).
+      environment:
+        SOCKET_CI_CLI_VERSION: << parameters.cli_version >>
+        SOCKET_CI_ORG_SLUG: << parameters.org_slug >>
+        SOCKET_CI_EXTRA_ARGS: << parameters.extra_args >>
+        SOCKET_CI_AUTO_MANIFEST: << parameters.auto_manifest >>
       command: <<include(scripts/run_socket_ci.sh)>>

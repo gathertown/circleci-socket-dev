@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2026-04-21
+
+### Fixed
+
+- **Runtime:** Resolved Bash heredoc / syntax errors when using `socket/sfw` and `socket/ci` with `<<include()>>` shell scripts. Unsubstituted `<< parameters.* >>` inside included files could be parsed by Bash as here-documents (`<<`). All dynamic values for those commands are now passed via the `run` step `environment` block (`SFW_COMMAND`, `ORB_SFW_*`, `SOCKET_CI_*`); included scripts contain no CircleCI parameter placeholders.
+
 ## [0.0.1] - 2026-04-20
 
 ### Added

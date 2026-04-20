@@ -5,7 +5,7 @@ description: >
 usage:
   version: 2.1
   orbs:
-    socket: gathertown/socket@0.0.1
+    socket: gathertown/socket@0.0.2
   workflows:
     supply-chain:
       jobs:
