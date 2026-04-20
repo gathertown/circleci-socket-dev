@@ -1,0 +1,16 @@
+description: >
+  Socket Firewall Enterprise (wrapper mode): binary from GitHub releases, API key via Context.
+  The key must have scopes `packages` and `entitlements:list`. See Enterprise configuration:
+  https://docs.socket.dev/docs/socket-firewall-enterprise-configuration
+
+usage:
+  version: 2.1
+  orbs:
+    socket: gathertown/socket@1.0.0
+  workflows:
+    supply-chain:
+      jobs:
+        - socket/scan:
+            mode: sfw
+            sfw_edition: enterprise
+            context: socket-firewall-enterprise-credentials

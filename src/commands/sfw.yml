@@ -1,13 +1,34 @@
 description: >
-  Run a package manager command through Socket Firewall Free (`sfw`) via npx.
-  No API token is required. Prefixes the given command with the `sfw` binary so
-  registry traffic is filtered (see https://docs.socket.dev/docs/socket-firewall-free).
+  Run a package manager command through Socket Firewall. Use `sfw_edition: free` for
+  Socket Firewall Free via the npm `sfw` package (`npx`). Use `sfw_edition: enterprise`
+  for Socket Firewall Enterprise: downloads the official binary from
+  https://github.com/SocketDev/firewall-release and requires `SOCKET_API_KEY` (or a
+  `.sfw.config` file). See https://docs.socket.dev/docs/socket-firewall-enterprise
 
 parameters:
+  sfw_edition:
+    type: enum
+    enum: [free, enterprise]
+    default: free
+    description: >
+      `free`: npm `sfw` (Socket Firewall Free). `enterprise`: GitHub release binary
+      (CLI wrapper mode; set `SOCKET_API_KEY` or `.sfw.config`).
   sfw_version:
     type: string
     default: latest
-    description: Version or dist-tag of the npm `sfw` package (e.g. latest, 2.0.4).
+    description: Version or dist-tag of the npm `sfw` package when `sfw_edition` is `free`.
+  sfw_enterprise_version:
+    type: string
+    default: latest
+    description: >
+      GitHub release tag for Socket Firewall Enterprise (for example `1.6.1`), or
+      `latest` to follow the newest release. Ignored when `sfw_edition` is `free`.
+  sfw_enterprise_musl:
+    type: boolean
+    default: false
+    description: >
+      When `sfw_edition` is `enterprise`, download the musl-linked Linux binary
+      (for example Alpine-like environments). Default uses glibc Linux builds.
   app_dir:
     type: string
     default: .
@@ -16,8 +37,34 @@ parameters:
     type: string
     default: "yarn install --frozen-lockfile"
     description: >
-      Full command after `npx … sfw@<version>` (e.g. `yarn install --frozen-lockfile`,
+      Full command after the `sfw` binary (for example `yarn install --frozen-lockfile`,
       `npm ci`, `pnpm install --frozen-lockfile`).
+  sfw_config_relative_paths:
+    type: boolean
+    default: false
+    description: >
+      When `sfw_edition` is `enterprise`, set `SFW_CONFIG_RELATIVE_PATHS` so `.sfw.config`
+      is resolved from the working directory and parents.
+  sfw_custom_registries:
+    type: string
+    default: ""
+    description: >
+      When non-empty and `sfw_edition` is `enterprise`, sets `SFW_CUSTOM_REGISTRIES`
+      (comma-separated `kind:host` entries). See Socket Enterprise configuration docs.
+  sfw_unknown_host_action:
+    type: string
+    default: ""
+    description: >
+      When non-empty and `sfw_edition` is `enterprise`, sets `SFW_UNKNOWN_HOST_ACTION`
+      (`block`, `warn`, or `ignore`).
+  sfw_telemetry_disabled:
+    type: boolean
+    default: false
+    description: When `sfw_edition` is `enterprise`, sets `SFW_TELEMETRY_DISABLED=true`.
+  sfw_debug:
+    type: boolean
+    default: false
+    description: When `sfw_edition` is `enterprise`, sets `SFW_DEBUG=true`.
 
 steps:
   - run:
@@ -25,4 +72,59 @@ steps:
       working_directory: << parameters.app_dir >>
       command: |
         set -euo pipefail
-        npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
+        EDITION="<< parameters.sfw_edition >>"
+        if [ "$EDITION" = "enterprise" ]; then
+          if [ -z "${SOCKET_API_KEY:-}" ] && [ ! -f .sfw.config ]; then
+            echo "Socket Firewall Enterprise requires SOCKET_API_KEY in the job environment (recommended: Context) or a .sfw.config file in the app directory." >&2
+            echo "See https://docs.socket.dev/docs/socket-firewall-enterprise-wrapper-mode" >&2
+            exit 1
+          fi
+          if [ "<< parameters.sfw_config_relative_paths >>" = "true" ]; then
+            export SFW_CONFIG_RELATIVE_PATHS=true
+          fi
+          if [ -n "<< parameters.sfw_custom_registries >>" ]; then
+            export SFW_CUSTOM_REGISTRIES='<< parameters.sfw_custom_registries >>'
+          fi
+          if [ -n "<< parameters.sfw_unknown_host_action >>" ]; then
+            export SFW_UNKNOWN_HOST_ACTION='<< parameters.sfw_unknown_host_action >>'
+          fi
+          if [ "<< parameters.sfw_telemetry_disabled >>" = "true" ]; then
+            export SFW_TELEMETRY_DISABLED=true
+          fi
+          if [ "<< parameters.sfw_debug >>" = "true" ]; then
+            export SFW_DEBUG=true
+          fi
+          ARCH=$(uname -m)
+          MUSL="<< parameters.sfw_enterprise_musl >>"
+          if [ "$MUSL" = "true" ]; then
+            case "$ARCH" in
+              x86_64) BIN=sfw-musl-linux-x86_64 ;;
+              aarch64) BIN=sfw-musl-linux-arm64 ;;
+              *)
+                echo "Unsupported CPU architecture for musl Socket Firewall binary: $ARCH" >&2
+                exit 1
+                ;;
+            esac
+          else
+            case "$ARCH" in
+              x86_64) BIN=sfw-linux-x86_64 ;;
+              aarch64) BIN=sfw-linux-arm64 ;;
+              *)
+                echo "Unsupported CPU architecture for Socket Firewall Enterprise Linux binary: $ARCH" >&2
+                exit 1
+                ;;
+            esac
+          fi
+          ENT_VER="<< parameters.sfw_enterprise_version >>"
+          if [ -z "$ENT_VER" ] || [ "$ENT_VER" = "latest" ]; then
+            URL="https://github.com/SocketDev/firewall-release/releases/latest/download/${BIN}"
+          else
+            URL="https://github.com/SocketDev/firewall-release/releases/download/v${ENT_VER}/${BIN}"
+          fi
+          echo "Downloading Socket Firewall Enterprise: ${URL}"
+          curl -fsSL -o /tmp/sfw-enterprise "$URL"
+          chmod +x /tmp/sfw-enterprise
+          /tmp/sfw-enterprise << parameters.sfw_command >>
+        else
+          npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
+        fi

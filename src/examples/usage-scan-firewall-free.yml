@@ -1,5 +1,5 @@
 description: >
-  Socket Firewall only: proxy package manager traffic without `socket ci` (no API token).
+  Socket Firewall Free only: proxy package manager traffic without `socket ci` (no API token).
 
 usage:
   version: 2.1

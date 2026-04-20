@@ -14,8 +14,8 @@ parameters:
     default: ci
     description: >
       `ci`: run `socket ci` only (requires SOCKET_CLI_API_TOKEN). `sfw`: run the
-      package manager through Socket Firewall only (no token). `both`: run sfw
-      then `socket ci`.
+      package manager through Socket Firewall (`sfw_edition` selects Free vs Enterprise).
+      `both`: run sfw then `socket ci`.
   node_tag:
     type: string
     default: current
@@ -41,15 +41,46 @@ parameters:
   extra_args:
     type: string
     default: ""
+  sfw_edition:
+    type: enum
+    enum: [free, enterprise]
+    default: free
+    description: >
+      `free`: Socket Firewall Free via npm `npx sfw`. `enterprise`: binary from
+      GitHub releases; requires `SOCKET_API_KEY` or `.sfw.config` (when mode is `sfw` or `both`).
   sfw_version:
     type: string
     default: latest
-    description: npm `sfw` package version or tag for npx (when mode is `sfw` or `both`).
+    description: npm `sfw` package version or tag for npx when `sfw_edition` is `free`.
+  sfw_enterprise_version:
+    type: string
+    default: latest
+    description: >
+      GitHub release tag for Enterprise when `sfw_edition` is `enterprise`, or `latest`.
+  sfw_enterprise_musl:
+    type: boolean
+    default: false
+    description: Use musl Enterprise Linux binary when `sfw_edition` is `enterprise`.
   sfw_command:
     type: string
     default: "yarn install --frozen-lockfile"
     description: >
-      Command passed to `sfw` after `npx` (when mode is `sfw` or `both`).
+      Command passed to `sfw` (when mode is `sfw` or `both`).
+  sfw_config_relative_paths:
+    type: boolean
+    default: false
+  sfw_custom_registries:
+    type: string
+    default: ""
+  sfw_unknown_host_action:
+    type: string
+    default: ""
+  sfw_telemetry_disabled:
+    type: boolean
+    default: false
+  sfw_debug:
+    type: boolean
+    default: false
 
 resource_class: << parameters.resource_class >>
 
@@ -62,9 +93,17 @@ steps:
           - equal: [<< parameters.mode >>, both]
       steps:
         - sfw:
+            sfw_edition: << parameters.sfw_edition >>
             sfw_version: << parameters.sfw_version >>
+            sfw_enterprise_version: << parameters.sfw_enterprise_version >>
+            sfw_enterprise_musl: << parameters.sfw_enterprise_musl >>
             app_dir: << parameters.app_dir >>
             sfw_command: << parameters.sfw_command >>
+            sfw_config_relative_paths: << parameters.sfw_config_relative_paths >>
+            sfw_custom_registries: << parameters.sfw_custom_registries >>
+            sfw_unknown_host_action: << parameters.sfw_unknown_host_action >>
+            sfw_telemetry_disabled: << parameters.sfw_telemetry_disabled >>
+            sfw_debug: << parameters.sfw_debug >>
   - when:
       condition:
         or:

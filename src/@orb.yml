@@ -2,9 +2,11 @@ version: 2.1
 
 description: >
   Run Socket.dev checks in CircleCI: policy enforcement via the official Socket CLI
-  (`socket ci`), network filtering via Socket Firewall Free (`sfw` through npx), or
-  both. Use `SOCKET_CLI_API_TOKEN` when running `socket ci` (create a CI/CD API token per
-  https://docs.socket.dev/docs/create-socket-api-key-for-cicd). `sfw` does not require a token.
+  (`socket ci`), Socket Firewall Free (`npx sfw`) or Socket Firewall Enterprise
+  (official `sfw` binary plus `SOCKET_API_KEY`), or both. Use `SOCKET_CLI_API_TOKEN`
+  for `socket ci` (see https://docs.socket.dev/docs/create-socket-api-key-for-cicd).
+  Enterprise Firewall uses `SOCKET_API_KEY` with scopes `packages` and `entitlements:list`
+  (see https://docs.socket.dev/docs/socket-firewall-enterprise).
 
 display:
   home_url: "https://socket.dev"

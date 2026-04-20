@@ -1,6 +1,6 @@
 version: 2.1
 description: |
-    Run Socket.dev checks in CircleCI: policy enforcement via the official Socket CLI (`socket ci`), network filtering via Socket Firewall Free (`sfw` through npx), or both. Use `SOCKET_CLI_API_TOKEN` when running `socket ci` (create a CI/CD API token per https://docs.socket.dev/docs/create-socket-api-key-for-cicd). `sfw` does not require a token.
+    Run Socket.dev checks in CircleCI: policy enforcement via the official Socket CLI (`socket ci`), Socket Firewall Free (`npx sfw`) or Socket Firewall Enterprise (official `sfw` binary plus `SOCKET_API_KEY`), or both. Use `SOCKET_CLI_API_TOKEN` for `socket ci` (see https://docs.socket.dev/docs/create-socket-api-key-for-cicd). Enterprise Firewall uses `SOCKET_API_KEY` with scopes `packages` and `entitlements:list` (see https://docs.socket.dev/docs/socket-firewall-enterprise).
 display:
     home_url: https://socket.dev
     source_url: https://github.com/gathertown/circleci-socket-dev
@@ -43,7 +43,7 @@ commands:
                 working_directory: << parameters.app_dir >>
     sfw:
         description: |
-            Run a package manager command through Socket Firewall Free (`sfw`) via npx. No API token is required. Prefixes the given command with the `sfw` binary so registry traffic is filtered (see https://docs.socket.dev/docs/socket-firewall-free).
+            Run a package manager command through Socket Firewall. Use `sfw_edition: free` for Socket Firewall Free via the npm `sfw` package (`npx`). Use `sfw_edition: enterprise` for Socket Firewall Enterprise: downloads the official binary from https://github.com/SocketDev/firewall-release and requires `SOCKET_API_KEY` (or a `.sfw.config` file). See https://docs.socket.dev/docs/socket-firewall-enterprise
         parameters:
             app_dir:
                 default: .
@@ -52,17 +52,113 @@ commands:
             sfw_command:
                 default: yarn install --frozen-lockfile
                 description: |
-                    Full command after `npx … sfw@<version>` (e.g. `yarn install --frozen-lockfile`, `npm ci`, `pnpm install --frozen-lockfile`).
+                    Full command after the `sfw` binary (for example `yarn install --frozen-lockfile`, `npm ci`, `pnpm install --frozen-lockfile`).
+                type: string
+            sfw_config_relative_paths:
+                default: false
+                description: |
+                    When `sfw_edition` is `enterprise`, set `SFW_CONFIG_RELATIVE_PATHS` so `.sfw.config` is resolved from the working directory and parents.
+                type: boolean
+            sfw_custom_registries:
+                default: ""
+                description: |
+                    When non-empty and `sfw_edition` is `enterprise`, sets `SFW_CUSTOM_REGISTRIES` (comma-separated `kind:host` entries). See Socket Enterprise configuration docs.
+                type: string
+            sfw_debug:
+                default: false
+                description: When `sfw_edition` is `enterprise`, sets `SFW_DEBUG=true`.
+                type: boolean
+            sfw_edition:
+                default: free
+                description: |
+                    `free`: npm `sfw` (Socket Firewall Free). `enterprise`: GitHub release binary (CLI wrapper mode; set `SOCKET_API_KEY` or `.sfw.config`).
+                enum:
+                    - free
+                    - enterprise
+                type: enum
+            sfw_enterprise_musl:
+                default: false
+                description: |
+                    When `sfw_edition` is `enterprise`, download the musl-linked Linux binary (for example Alpine-like environments). Default uses glibc Linux builds.
+                type: boolean
+            sfw_enterprise_version:
+                default: latest
+                description: |
+                    GitHub release tag for Socket Firewall Enterprise (for example `1.6.1`), or `latest` to follow the newest release. Ignored when `sfw_edition` is `free`.
+                type: string
+            sfw_telemetry_disabled:
+                default: false
+                description: When `sfw_edition` is `enterprise`, sets `SFW_TELEMETRY_DISABLED=true`.
+                type: boolean
+            sfw_unknown_host_action:
+                default: ""
+                description: |
+                    When non-empty and `sfw_edition` is `enterprise`, sets `SFW_UNKNOWN_HOST_ACTION` (`block`, `warn`, or `ignore`).
                 type: string
             sfw_version:
                 default: latest
-                description: Version or dist-tag of the npm `sfw` package (e.g. latest, 2.0.4).
+                description: Version or dist-tag of the npm `sfw` package when `sfw_edition` is `free`.
                 type: string
         steps:
             - run:
                 command: |
                     set -euo pipefail
-                    npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
+                    EDITION="<< parameters.sfw_edition >>"
+                    if [ "$EDITION" = "enterprise" ]; then
+                      if [ -z "${SOCKET_API_KEY:-}" ] && [ ! -f .sfw.config ]; then
+                        echo "Socket Firewall Enterprise requires SOCKET_API_KEY in the job environment (recommended: Context) or a .sfw.config file in the app directory." >&2
+                        echo "See https://docs.socket.dev/docs/socket-firewall-enterprise-wrapper-mode" >&2
+                        exit 1
+                      fi
+                      if [ "<< parameters.sfw_config_relative_paths >>" = "true" ]; then
+                        export SFW_CONFIG_RELATIVE_PATHS=true
+                      fi
+                      if [ -n "<< parameters.sfw_custom_registries >>" ]; then
+                        export SFW_CUSTOM_REGISTRIES='<< parameters.sfw_custom_registries >>'
+                      fi
+                      if [ -n "<< parameters.sfw_unknown_host_action >>" ]; then
+                        export SFW_UNKNOWN_HOST_ACTION='<< parameters.sfw_unknown_host_action >>'
+                      fi
+                      if [ "<< parameters.sfw_telemetry_disabled >>" = "true" ]; then
+                        export SFW_TELEMETRY_DISABLED=true
+                      fi
+                      if [ "<< parameters.sfw_debug >>" = "true" ]; then
+                        export SFW_DEBUG=true
+                      fi
+                      ARCH=$(uname -m)
+                      MUSL="<< parameters.sfw_enterprise_musl >>"
+                      if [ "$MUSL" = "true" ]; then
+                        case "$ARCH" in
+                          x86_64) BIN=sfw-musl-linux-x86_64 ;;
+                          aarch64) BIN=sfw-musl-linux-arm64 ;;
+                          *)
+                            echo "Unsupported CPU architecture for musl Socket Firewall binary: $ARCH" >&2
+                            exit 1
+                            ;;
+                        esac
+                      else
+                        case "$ARCH" in
+                          x86_64) BIN=sfw-linux-x86_64 ;;
+                          aarch64) BIN=sfw-linux-arm64 ;;
+                          *)
+                            echo "Unsupported CPU architecture for Socket Firewall Enterprise Linux binary: $ARCH" >&2
+                            exit 1
+                            ;;
+                        esac
+                      fi
+                      ENT_VER="<< parameters.sfw_enterprise_version >>"
+                      if [ -z "$ENT_VER" ] || [ "$ENT_VER" = "latest" ]; then
+                        URL="https://github.com/SocketDev/firewall-release/releases/latest/download/${BIN}"
+                      else
+                        URL="https://github.com/SocketDev/firewall-release/releases/download/v${ENT_VER}/${BIN}"
+                      fi
+                      echo "Downloading Socket Firewall Enterprise: ${URL}"
+                      curl -fsSL -o /tmp/sfw-enterprise "$URL"
+                      chmod +x /tmp/sfw-enterprise
+                      /tmp/sfw-enterprise << parameters.sfw_command >>
+                    else
+                      npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
+                    fi
                 name: Socket Firewall (sfw)
                 working_directory: << parameters.app_dir >>
 executors:
@@ -101,7 +197,7 @@ jobs:
             mode:
                 default: ci
                 description: |
-                    `ci`: run `socket ci` only (requires SOCKET_CLI_API_TOKEN). `sfw`: run the package manager through Socket Firewall only (no token). `both`: run sfw then `socket ci`.
+                    `ci`: run `socket ci` only (requires SOCKET_CLI_API_TOKEN). `sfw`: run the package manager through Socket Firewall (`sfw_edition` selects Free vs Enterprise). `both`: run sfw then `socket ci`.
                 enum:
                     - ci
                     - sfw
@@ -122,11 +218,43 @@ jobs:
             sfw_command:
                 default: yarn install --frozen-lockfile
                 description: |
-                    Command passed to `sfw` after `npx` (when mode is `sfw` or `both`).
+                    Command passed to `sfw` (when mode is `sfw` or `both`).
+                type: string
+            sfw_config_relative_paths:
+                default: false
+                type: boolean
+            sfw_custom_registries:
+                default: ""
+                type: string
+            sfw_debug:
+                default: false
+                type: boolean
+            sfw_edition:
+                default: free
+                description: |
+                    `free`: Socket Firewall Free via npm `npx sfw`. `enterprise`: binary from GitHub releases; requires `SOCKET_API_KEY` or `.sfw.config` (when mode is `sfw` or `both`).
+                enum:
+                    - free
+                    - enterprise
+                type: enum
+            sfw_enterprise_musl:
+                default: false
+                description: Use musl Enterprise Linux binary when `sfw_edition` is `enterprise`.
+                type: boolean
+            sfw_enterprise_version:
+                default: latest
+                description: |
+                    GitHub release tag for Enterprise when `sfw_edition` is `enterprise`, or `latest`.
+                type: string
+            sfw_telemetry_disabled:
+                default: false
+                type: boolean
+            sfw_unknown_host_action:
+                default: ""
                 type: string
             sfw_version:
                 default: latest
-                description: npm `sfw` package version or tag for npx (when mode is `sfw` or `both`).
+                description: npm `sfw` package version or tag for npx when `sfw_edition` is `free`.
                 type: string
         resource_class: << parameters.resource_class >>
         steps:
@@ -144,6 +272,14 @@ jobs:
                     - sfw:
                         app_dir: << parameters.app_dir >>
                         sfw_command: << parameters.sfw_command >>
+                        sfw_config_relative_paths: << parameters.sfw_config_relative_paths >>
+                        sfw_custom_registries: << parameters.sfw_custom_registries >>
+                        sfw_debug: << parameters.sfw_debug >>
+                        sfw_edition: << parameters.sfw_edition >>
+                        sfw_enterprise_musl: << parameters.sfw_enterprise_musl >>
+                        sfw_enterprise_version: << parameters.sfw_enterprise_version >>
+                        sfw_telemetry_disabled: << parameters.sfw_telemetry_disabled >>
+                        sfw_unknown_host_action: << parameters.sfw_unknown_host_action >>
                         sfw_version: << parameters.sfw_version >>
             - when:
                 condition:
@@ -162,19 +298,7 @@ jobs:
                         extra_args: << parameters.extra_args >>
                         org_slug: << parameters.org_slug >>
 examples:
-    basic:
-        description: |
-            Run the `scan` job with credentials supplied through a Context.
-        usage:
-            version: "2.1"
-            orbs:
-                socket: gathertown/socket@1.0.0
-            workflows:
-                supply-chain:
-                    jobs:
-                        - socket/scan:
-                            context: socket-dev-credentials
-    scan-both:
+    usage-scan-ci-plus-firewall:
         description: |
             Run installs through Socket Firewall then `socket ci`. Set `SOCKET_CLI_API_TOKEN` for the policy scan; `sfw` itself does not require a token.
         usage:
@@ -187,9 +311,23 @@ examples:
                         - socket/scan:
                             context: socket-dev-credentials
                             mode: both
-    scan-sfw-only:
+    usage-scan-firewall-enterprise:
         description: |
-            Socket Firewall only: proxy package manager traffic without `socket ci` (no API token).
+            Socket Firewall Enterprise (wrapper mode): binary from GitHub releases, API key via Context. The key must have scopes `packages` and `entitlements:list`. See Enterprise configuration: https://docs.socket.dev/docs/socket-firewall-enterprise-configuration
+        usage:
+            version: "2.1"
+            orbs:
+                socket: gathertown/socket@1.0.0
+            workflows:
+                supply-chain:
+                    jobs:
+                        - socket/scan:
+                            context: socket-firewall-enterprise-credentials
+                            mode: sfw
+                            sfw_edition: enterprise
+    usage-scan-firewall-free:
+        description: |
+            Socket Firewall Free only: proxy package manager traffic without `socket ci` (no API token).
         usage:
             version: "2.1"
             orbs:
@@ -200,4 +338,16 @@ examples:
                         - socket/scan:
                             mode: sfw
                             sfw_command: yarn install --frozen-lockfile
+    usage-scan-socket-ci:
+        description: |
+            Run the `scan` job with credentials supplied through a Context.
+        usage:
+            version: "2.1"
+            orbs:
+                socket: gathertown/socket@1.0.0
+            workflows:
+                supply-chain:
+                    jobs:
+                        - socket/scan:
+                            context: socket-dev-credentials
 
