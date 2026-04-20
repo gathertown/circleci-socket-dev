@@ -2,6 +2,8 @@
 
 Reusable CircleCI configuration for [Socket.dev](https://socket.dev) in CircleCI. You can run [`socket ci`](https://docs.socket.dev/docs/socket-ci) for org policy enforcement, [Socket Firewall Free](https://docs.socket.dev/docs/socket-firewall-free) (`npx sfw`) or [Socket Firewall Enterprise](https://docs.socket.dev/docs/socket-firewall-enterprise) (official `sfw` binary and `SOCKET_API_KEY`) to filter package-manager traffic, or both. The `scan` job uses **`mode`** (`ci`, `sfw`, or `both`; default `ci`) and **`sfw_edition`** (`free` or `enterprise`) when running the firewall step.
 
+Version history: [CHANGELOG.md](CHANGELOG.md).
+
 ## Requirements
 
 - CircleCI configuration **version 2.1**
@@ -31,7 +33,7 @@ For **`mode: sfw`** with **`sfw_edition: free`**, no Socket token is required.
 
 ## Installation
 
-After you [pack and publish](#develop-pack-and-publish) this orb under your CircleCI namespace (for example `gathertown/socket@1.0.0`), declare it in `.circleci/config.yml`:
+Declare the orb in `.circleci/config.yml` (pin the version your project should use):
 
 ```yaml
 version: 2.1
@@ -39,8 +41,6 @@ version: 2.1
 orbs:
   socket: gathertown/socket@1.0.0
 ```
-
-To consume the orb from a raw URL instead of the registry, add your URL prefix to the [organization URL orb allow list](https://circleci.com/docs/orbs/use/managing-url-orbs-allow-lists/) and reference the packed YAML file as in the [URL orbs](https://circleci.com/docs/orbs/use/orb-intro/) documentation.
 
 ## Usage
 
@@ -239,9 +239,9 @@ workflows:
           context: socket-dev-credentials
 ```
 
-### Registry usage example
+### More examples (`src/examples`)
 
-See `src/examples/` — `usage-scan-socket-ci.yml`, `usage-scan-ci-plus-firewall.yml`, `usage-scan-firewall-free.yml`, and `usage-scan-firewall-enterprise.yml` — for orb-registry-style snippets you can adapt when publishing.
+See `src/examples/` (`usage-scan-socket-ci.yml`, `usage-scan-ci-plus-firewall.yml`, `usage-scan-firewall-free.yml`, `usage-scan-firewall-enterprise.yml`) for additional snippets.
 
 ## Behavior
 
@@ -250,7 +250,7 @@ See `src/examples/` — `usage-scan-socket-ci.yml`, `usage-scan-ci-plus-firewall
 - **Firewall Free** (`sfw_edition: free`): `npx --yes sfw@<sfw_version> <sfw_command>`. See [Socket Firewall Free](https://docs.socket.dev/docs/socket-firewall-free).
 - **Firewall Enterprise** (`sfw_edition: enterprise`): downloads `sfw-linux-x86_64` or `sfw-linux-arm64` from [firewall-release](https://github.com/SocketDev/firewall-release) (musl variants optional), then runs `<sfw_command>` with Enterprise [environment variables](https://docs.socket.dev/docs/socket-firewall-enterprise-configuration) as configured.
 
-## Develop, pack, and publish
+## Develop and validate
 
 Sources live under `src/` in the [registry orb layout](https://circleci.com/docs/orbs/author/create-test-and-publish-a-registry-orb/).
 
@@ -259,27 +259,19 @@ circleci orb pack src > orb.yml
 circleci orb validate orb.yml
 ```
 
-Publish `orb.yml` to the `gathertown` namespace with the CircleCI CLI or your release process. Update `display.source_url` in `src/@orb.yml` if the canonical Git repository URL changes.
+## Release process
 
-**CI in this repo:** [`.circleci/config.yml`](.circleci/config.yml) runs lint, pack, review, and continues to [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml) (pack/validate test + publish on SemVer **git tags**). Enable [**dynamic configuration / setup workflows**](https://circleci.com/docs/pipelines/#dynamic-configuration) on the CircleCI project if prompted.
+Releases are published to the [CircleCI orb registry](https://circleci.com/developer/orbs) as **`gathertown/socket`** by CI when you push a matching **git tag** (see [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml)).
 
-### Publish `gathertown/socket` from CircleCI (one-time setup)
+1. **Changelog** — Add a section for the new version in [CHANGELOG.md](CHANGELOG.md) ([Keep a Changelog](https://keepachangelog.com/) style) and merge it to your default branch.
 
-Publishing is triggered only on tags like `v1.0.0` by [`orb-tools/publish`](https://circleci.com/developer/orbs/orb/circleci/orb-tools#jobs-publish) in [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml). The job uses **`context: orb-publishing`**. Configure that Context in the **gathertown** CircleCI organization:
+2. **Tag** — Create an annotated or lightweight tag whose name is **SemVer with a `v` prefix**: `vMAJOR.MINOR.PATCH` (for example `v0.0.1` or `v1.2.0`). Tags like `v1.0.0-beta` do **not** match the current pipeline filters.
 
-1. **Create a Context**  
-   In CircleCI: **Organization Settings** → **Contexts** → **Create Context** → name it **`orb-publishing`**. Optionally restrict which security groups may use it.
+3. **Push the tag** — `git push origin vX.Y.Z`. That triggers the continuation workflow; **`command-test`** and **`orb-tools/pack`** run, then **`orb-tools/publish`** publishes the orb version that matches the tag (without the leading `v`).
 
-2. **Add a Personal API Token**  
-   In the Context, add an environment variable **`CIRCLE_TOKEN`**. Its value must be a [**Personal API Token**](https://circleci.com/docs/managing-api-tokens/) for a user who is allowed to publish orbs to the **`gathertown`** namespace (see [Orb publishing](https://circleci.com/docs/orbs/author/publish-orbs/)).
+4. **CircleCI setup** — The publish job uses **`context: orb-publishing`**. In your CircleCI organization, that Context must expose a **`CIRCLE_TOKEN`** ([personal API token](https://circleci.com/docs/managing-api-tokens/)) for a user allowed to publish **`gathertown/socket`**. The project must use [dynamic configuration / setup workflows](https://circleci.com/docs/pipelines/#dynamic-configuration) so `orb-tools/continue` can run [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml).
 
-3. **Attach the Context to the pipeline**  
-   The workflow already references `context: orb-publishing` on the publish job. Ensure this GitHub repository’s CircleCI **project** belongs to the **gathertown** org so that job can read the Context.
-
-4. **Release**  
-   Push a SemVer tag (for example `v1.0.0`). The `test-deploy` workflow should pack the orb and publish **`gathertown/socket@1.0.0`** to the registry.
-
-If you rename the Context or the token variable, update [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml) accordingly (`orb-tools/publish` accepts a `circleci_token` parameter if you need a different env var name).
+5. **GitHub (optional)** — Create a [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) for the same tag and paste the notes from **CHANGELOG.md**.
 
 ## Troubleshooting
 
@@ -296,6 +288,7 @@ If you rename the Context or the token variable, update [`.circleci/test-deploy.
 
 ## References
 
+- [CHANGELOG.md](CHANGELOG.md) — version history
 - [CircleCI — Orbs overview](https://circleci.com/docs/orbs/use/orb-intro/)
 - [Socket — Create API key for CI/CD](https://docs.socket.dev/docs/create-socket-api-key-for-cicd)
 - [Socket — `socket ci`](https://docs.socket.dev/docs/socket-ci)
