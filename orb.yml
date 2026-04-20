@@ -2,7 +2,7 @@ version: 2.1
 description: |
     Run Socket.dev checks in CircleCI: policy enforcement via the official Socket CLI (`socket ci`), Socket Firewall Free (`npx sfw`) or Socket Firewall Enterprise (official `sfw` binary plus `SOCKET_API_KEY`), or both. Use `SOCKET_CLI_API_TOKEN` for `socket ci` (see https://docs.socket.dev/docs/create-socket-api-key-for-cicd). Enterprise Firewall uses `SOCKET_API_KEY` with scopes `packages` and `entitlements:list` (see https://docs.socket.dev/docs/socket-firewall-enterprise).
 display:
-    home_url: https://socket.dev
+    home_url: https://github.com/gathertown/circleci-socket-dev
     source_url: https://github.com/gathertown/circleci-socket-dev
 commands:
     ci:
@@ -35,10 +35,10 @@ commands:
             - run:
                 command: |
                     set -euo pipefail
-                    if [ -n "<< parameters.org_slug >>" ]; then
-                      export SOCKET_CLI_ORG_SLUG="<< parameters.org_slug >>"
+                    if [ -n "\<< parameters.org_slug >>" ]; then
+                      export SOCKET_CLI_ORG_SLUG="\<< parameters.org_slug >>"
                     fi
-                    npx --yes socket@<< parameters.cli_version >> ci<<# parameters.auto_manifest>> --autoManifest<</ parameters.auto_manifest>> << parameters.extra_args >>
+                    npx --yes socket@\<< parameters.cli_version >> ci\<<# parameters.auto_manifest>> --autoManifest\<</ parameters.auto_manifest>> \<< parameters.extra_args >>
                 name: Socket CI (socket.dev)
                 working_directory: << parameters.app_dir >>
     sfw:
@@ -103,30 +103,30 @@ commands:
             - run:
                 command: |
                     set -euo pipefail
-                    EDITION="<< parameters.sfw_edition >>"
+                    EDITION="\<< parameters.sfw_edition >>"
                     if [ "$EDITION" = "enterprise" ]; then
                       if [ -z "${SOCKET_API_KEY:-}" ] && [ ! -f .sfw.config ]; then
                         echo "Socket Firewall Enterprise requires SOCKET_API_KEY in the job environment (recommended: Context) or a .sfw.config file in the app directory." >&2
                         echo "See https://docs.socket.dev/docs/socket-firewall-enterprise-wrapper-mode" >&2
                         exit 1
                       fi
-                      if [ "<< parameters.sfw_config_relative_paths >>" = "true" ]; then
+                      if [ "\<< parameters.sfw_config_relative_paths >>" = "true" ]; then
                         export SFW_CONFIG_RELATIVE_PATHS=true
                       fi
-                      if [ -n "<< parameters.sfw_custom_registries >>" ]; then
-                        export SFW_CUSTOM_REGISTRIES='<< parameters.sfw_custom_registries >>'
+                      if [ -n "\<< parameters.sfw_custom_registries >>" ]; then
+                        export SFW_CUSTOM_REGISTRIES='\<< parameters.sfw_custom_registries >>'
                       fi
-                      if [ -n "<< parameters.sfw_unknown_host_action >>" ]; then
-                        export SFW_UNKNOWN_HOST_ACTION='<< parameters.sfw_unknown_host_action >>'
+                      if [ -n "\<< parameters.sfw_unknown_host_action >>" ]; then
+                        export SFW_UNKNOWN_HOST_ACTION='\<< parameters.sfw_unknown_host_action >>'
                       fi
-                      if [ "<< parameters.sfw_telemetry_disabled >>" = "true" ]; then
+                      if [ "\<< parameters.sfw_telemetry_disabled >>" = "true" ]; then
                         export SFW_TELEMETRY_DISABLED=true
                       fi
-                      if [ "<< parameters.sfw_debug >>" = "true" ]; then
+                      if [ "\<< parameters.sfw_debug >>" = "true" ]; then
                         export SFW_DEBUG=true
                       fi
                       ARCH=$(uname -m)
-                      MUSL="<< parameters.sfw_enterprise_musl >>"
+                      MUSL="\<< parameters.sfw_enterprise_musl >>"
                       if [ "$MUSL" = "true" ]; then
                         case "$ARCH" in
                           x86_64) BIN=sfw-musl-linux-x86_64 ;;
@@ -146,7 +146,7 @@ commands:
                             ;;
                         esac
                       fi
-                      ENT_VER="<< parameters.sfw_enterprise_version >>"
+                      ENT_VER="\<< parameters.sfw_enterprise_version >>"
                       if [ -z "$ENT_VER" ] || [ "$ENT_VER" = "latest" ]; then
                         URL="https://github.com/SocketDev/firewall-release/releases/latest/download/${BIN}"
                       else
@@ -155,9 +155,9 @@ commands:
                       echo "Downloading Socket Firewall Enterprise: ${URL}"
                       curl -fsSL -o /tmp/sfw-enterprise "$URL"
                       chmod +x /tmp/sfw-enterprise
-                      /tmp/sfw-enterprise << parameters.sfw_command >>
+                      /tmp/sfw-enterprise \<< parameters.sfw_command >>
                     else
-                      npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
+                      npx --yes sfw@\<< parameters.sfw_version >> \<< parameters.sfw_command >>
                     fi
                 name: Socket Firewall (sfw)
                 working_directory: << parameters.app_dir >>
