@@ -173,13 +173,14 @@ commands:
                       curl -fsSL -o /tmp/sfw-enterprise "$URL"
                       chmod +x /tmp/sfw-enterprise
                       # shellcheck disable=SC2086
-                      /tmp/sfw-enterprise ${SFW_COMMAND:?SFW_COMMAND must be set by the orb (sfw_command parameter)}
+                      /tmp/sfw-enterprise ${ORB_SFW_COMMAND:?ORB_SFW_COMMAND must be set by the orb (sfw_command parameter)}
                     else
                       SFW_VER="${ORB_SFW_VERSION:-latest}"
                       # shellcheck disable=SC2086
-                      npx --yes sfw@${SFW_VER} ${SFW_COMMAND:?SFW_COMMAND must be set by the orb (sfw_command parameter)}
+                      npx --yes sfw@${SFW_VER} ${ORB_SFW_COMMAND:?ORB_SFW_COMMAND must be set by the orb (sfw_command parameter)}
                     fi
                 environment:
+                    ORB_SFW_COMMAND: << parameters.sfw_command >>
                     ORB_SFW_CONFIG_RELATIVE_PATHS: << parameters.sfw_config_relative_paths >>
                     ORB_SFW_CUSTOM_REGISTRIES: << parameters.sfw_custom_registries >>
                     ORB_SFW_DEBUG: << parameters.sfw_debug >>
@@ -189,7 +190,6 @@ commands:
                     ORB_SFW_TELEMETRY_DISABLED: << parameters.sfw_telemetry_disabled >>
                     ORB_SFW_UNKNOWN_HOST_ACTION: << parameters.sfw_unknown_host_action >>
                     ORB_SFW_VERSION: << parameters.sfw_version >>
-                    SFW_COMMAND: << parameters.sfw_command >>
                 name: Socket Firewall (sfw)
                 working_directory: << parameters.app_dir >>
 executors:

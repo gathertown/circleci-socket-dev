@@ -56,9 +56,9 @@ if [ "$EDITION" = "enterprise" ]; then
   curl -fsSL -o /tmp/sfw-enterprise "$URL"
   chmod +x /tmp/sfw-enterprise
   # shellcheck disable=SC2086
-  /tmp/sfw-enterprise ${SFW_COMMAND:?SFW_COMMAND must be set by the orb (sfw_command parameter)}
+  /tmp/sfw-enterprise ${ORB_SFW_COMMAND:?ORB_SFW_COMMAND must be set by the orb (sfw_command parameter)}
 else
   SFW_VER="${ORB_SFW_VERSION:-latest}"
   # shellcheck disable=SC2086
-  npx --yes sfw@${SFW_VER} ${SFW_COMMAND:?SFW_COMMAND must be set by the orb (sfw_command parameter)}
+  npx --yes sfw@${SFW_VER} ${ORB_SFW_COMMAND:?ORB_SFW_COMMAND must be set by the orb (sfw_command parameter)}
 fi

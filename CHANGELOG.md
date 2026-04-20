@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Runtime:** Resolved Bash heredoc / syntax errors when using `socket/sfw` and `socket/ci` with `<<include()>>` shell scripts. Unsubstituted `<< parameters.* >>` inside included files could be parsed by Bash as here-documents (`<<`). All dynamic values for those commands are now passed via the `run` step `environment` block (`SFW_COMMAND`, `ORB_SFW_*`, `SOCKET_CI_*`); included scripts contain no CircleCI parameter placeholders.
+- **Runtime:** Resolved Bash heredoc / syntax errors when using `socket/sfw` and `socket/ci` with `<<include()>>` shell scripts. Unsubstituted `<< parameters.* >>` inside included files could be parsed by Bash as here-documents (`<<`). All dynamic values for those commands are now passed via the `run` step `environment` block (`ORB_SFW_COMMAND`, `ORB_SFW_*`, `SOCKET_CI_*`); included scripts contain no CircleCI parameter placeholders.
+- **Bash / `<<include()>>`:** CircleCI `<< parameters.* >>` placeholders inside included shell scripts were not always substituted before Bash ran the script. Bash then treated `<<` as the start of a **here-document**, causing warnings like `wanted 'parameters.sfw_command'` / `parameters.cli_version` and `syntax error near unexpected token`. This affected **`socket/sfw`** (Free and Enterprise) and **`socket/ci`** on real executors (e.g. `cimg/node`).
+- **Mitigation:** Dynamic values are passed only via the `run` step **`environment`** block:
+  - **`socket/sfw`:** `ORB_SFW_COMMAND`, `ORB_SFW_EDITION`, `ORB_SFW_VERSION`, `ORB_SFW_ENTERPRISE_*`, and related Enterprise flags (orb-internal `ORB_*` prefix avoids colliding with Socket Firewall’s `SFW_*` env vars). `src/scripts/run_sfw.sh` contains **no** `<< parameters.* >>` tokens.
+  - **`socket/ci`:** `SOCKET_CI_CLI_VERSION`, `SOCKET_CI_ORG_SLUG`, `SOCKET_CI_EXTRA_ARGS`, `SOCKET_CI_AUTO_MANIFEST` in `src/scripts/run_socket_ci.sh`.
+
+**Upgrade:** Consumers on `gathertown/socket@0.0.1` should pin **`@0.0.2`** or later.
 
 ## [0.0.1] - 2026-04-20
 

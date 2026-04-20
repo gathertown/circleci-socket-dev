@@ -259,13 +259,15 @@ circleci orb pack src > orb.yml
 circleci orb validate orb.yml
 ```
 
+**Maintainers:** The `ci` and `sfw` commands use `<<include(scripts/*.sh)>>`. Dynamic values are passed only through the `run` step **`environment`** block — **`ORB_SFW_*`** (including `ORB_SFW_COMMAND`) and **`SOCKET_CI_*`** — so Bash never sees raw CircleCI `<<` in included scripts, and orb-internal names stay separate from Socket Firewall’s documented **`SFW_*`** variables.
+
 ## Release process
 
 Releases are published to the [CircleCI orb registry](https://circleci.com/developer/orbs) as **`gathertown/socket`** by CI when you push a matching **git tag** (see [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml)).
 
 1. **Changelog** — Add a section for the new version in [CHANGELOG.md](CHANGELOG.md) ([Keep a Changelog](https://keepachangelog.com/) style) and merge it to your default branch.
 
-2. **Tag** — Create an annotated or lightweight tag whose name is **SemVer with a `v` prefix**: `vMAJOR.MINOR.PATCH` (for example `v0.0.1` or `v1.2.0`). Tags like `v1.0.0-beta` do **not** match the current pipeline filters.
+2. **Tag** — Create an annotated or lightweight tag whose name is **SemVer with a `v` prefix**: `vMAJOR.MINOR.PATCH` (for example `v0.0.2` or `v1.2.0`). Tags like `v1.0.0-beta` do **not** match the current pipeline filters.
 
 3. **Push the tag** — `git push origin vX.Y.Z`. That triggers the continuation workflow; **`command-test`** and **`orb-tools/pack`** run, then **`orb-tools/publish`** publishes the orb version that matches the tag (without the leading `v`).
 
@@ -298,4 +300,4 @@ Releases are published to the [CircleCI orb registry](https://circleci.com/devel
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) and [Orb Licensing](https://circleci.com/developer/orbs/licensing).
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) and [Orb Licensing](https://circleci.com/developer/orbs/licensing).
