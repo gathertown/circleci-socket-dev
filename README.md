@@ -39,7 +39,7 @@ Declare the orb in `.circleci/config.yml` (pin the version your project should u
 version: 2.1
 
 orbs:
-  socket: gathertown/socket@1.0.0
+  socket: gathertown/socket@0.0.1
 ```
 
 ## Usage
@@ -202,7 +202,7 @@ Forwarded to `ci` when `mode` is `ci` or `both`: `cli_version`, `auto_manifest`,
 version: 2.1
 
 orbs:
-  socket: gathertown/socket@1.0.0
+  socket: gathertown/socket@0.0.1
 
 workflows:
   supply-chain:

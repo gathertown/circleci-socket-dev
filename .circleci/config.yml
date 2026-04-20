@@ -15,6 +15,9 @@ workflows:
           filters: *filters
       - orb-tools/review:
           orb_name: socket
+          # RC011 requires usage examples to match the published orb major; patch/minor
+          # bumps would otherwise force churn. Examples still track real releases in git.
+          exclude: RC011
           filters: *filters
       - orb-tools/continue:
           pipeline_number: << pipeline.number >>
