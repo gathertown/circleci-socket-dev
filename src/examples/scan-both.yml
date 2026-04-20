@@ -1,0 +1,14 @@
+description: >
+  Run installs through Socket Firewall then `socket ci`. Set `SOCKET_CLI_API_TOKEN`
+  for the policy scan; `sfw` itself does not require a token.
+
+usage:
+  version: 2.1
+  orbs:
+    socket: gathertown/socket@1.0.0
+  workflows:
+    supply-chain:
+      jobs:
+        - socket/scan:
+            mode: both
+            context: socket-dev-credentials

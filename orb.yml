@@ -1,0 +1,203 @@
+version: 2.1
+description: |
+    Run Socket.dev checks in CircleCI: policy enforcement via the official Socket CLI (`socket ci`), network filtering via Socket Firewall Free (`sfw` through npx), or both. Use `SOCKET_CLI_API_TOKEN` when running `socket ci` (create a CI/CD API token per https://docs.socket.dev/docs/create-socket-api-key-for-cicd). `sfw` does not require a token.
+display:
+    home_url: https://socket.dev
+    source_url: https://github.com/gathertown/circleci-socket-dev
+commands:
+    ci:
+        description: |
+            Run `socket ci` via npx to create a Socket scan and enforce your org security and license policies. Requires `SOCKET_CLI_API_TOKEN` in the job environment.
+        parameters:
+            app_dir:
+                default: .
+                description: Working directory for the scan (relative to the checkout root).
+                type: string
+            auto_manifest:
+                default: false
+                description: |
+                    When true, passes `--autoManifest` so manifests can be generated where supported.
+                type: boolean
+            cli_version:
+                default: latest
+                description: Version or dist-tag of the npm `socket` package (e.g. latest, 1.1.84).
+                type: string
+            extra_args:
+                default: ""
+                description: Extra arguments appended to the `socket ci` command line.
+                type: string
+            org_slug:
+                default: ""
+                description: |
+                    If set, exports SOCKET_CLI_ORG_SLUG. Omit to use the default org for the API token.
+                type: string
+        steps:
+            - run:
+                command: |
+                    set -euo pipefail
+                    if [ -n "<< parameters.org_slug >>" ]; then
+                      export SOCKET_CLI_ORG_SLUG="<< parameters.org_slug >>"
+                    fi
+                    npx --yes socket@<< parameters.cli_version >> ci<<# parameters.auto_manifest>> --autoManifest<</ parameters.auto_manifest>> << parameters.extra_args >>
+                name: Socket CI (socket.dev)
+                working_directory: << parameters.app_dir >>
+    sfw:
+        description: |
+            Run a package manager command through Socket Firewall Free (`sfw`) via npx. No API token is required. Prefixes the given command with the `sfw` binary so registry traffic is filtered (see https://docs.socket.dev/docs/socket-firewall-free).
+        parameters:
+            app_dir:
+                default: .
+                description: Working directory for the command (relative to the checkout root).
+                type: string
+            sfw_command:
+                default: yarn install --frozen-lockfile
+                description: |
+                    Full command after `npx … sfw@<version>` (e.g. `yarn install --frozen-lockfile`, `npm ci`, `pnpm install --frozen-lockfile`).
+                type: string
+            sfw_version:
+                default: latest
+                description: Version or dist-tag of the npm `sfw` package (e.g. latest, 2.0.4).
+                type: string
+        steps:
+            - run:
+                command: |
+                    set -euo pipefail
+                    npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
+                name: Socket Firewall (sfw)
+                working_directory: << parameters.app_dir >>
+executors:
+    default:
+        description: |
+            Node.js environment (cimg/node). The Socket CLI is run with npx; use a tag that matches your project’s Node engine when applicable.
+        docker:
+            - image: cimg/node:<< parameters.tag >>
+        parameters:
+            tag:
+                default: current
+                description: |
+                    Image tag for cimg/node (see https://hub.docker.com/r/cimg/node/tags).
+                type: string
+jobs:
+    scan:
+        description: |
+            Check out the repository and run Socket protection according to `mode`: `socket ci` only, Socket Firewall (`sfw`) only, or both (sfw then `socket ci`). For `ci` and `both`, configure `SOCKET_CLI_API_TOKEN` on the project or via a Context.
+        executor:
+            name: default
+            tag: << parameters.node_tag >>
+        parameters:
+            app_dir:
+                default: .
+                type: string
+            auto_manifest:
+                default: false
+                type: boolean
+            cli_version:
+                default: latest
+                description: npm `socket` package version or tag for npx.
+                type: string
+            extra_args:
+                default: ""
+                type: string
+            mode:
+                default: ci
+                description: |
+                    `ci`: run `socket ci` only (requires SOCKET_CLI_API_TOKEN). `sfw`: run the package manager through Socket Firewall only (no token). `both`: run sfw then `socket ci`.
+                enum:
+                    - ci
+                    - sfw
+                    - both
+                type: enum
+            node_tag:
+                default: current
+                description: cimg/node tag for the job executor.
+                type: string
+            org_slug:
+                default: ""
+                type: string
+            resource_class:
+                default: medium
+                description: |
+                    CircleCI resource class (e.g. small, medium, large, xlarge, 2xlarge, arm.medium).
+                type: string
+            sfw_command:
+                default: yarn install --frozen-lockfile
+                description: |
+                    Command passed to `sfw` after `npx` (when mode is `sfw` or `both`).
+                type: string
+            sfw_version:
+                default: latest
+                description: npm `sfw` package version or tag for npx (when mode is `sfw` or `both`).
+                type: string
+        resource_class: << parameters.resource_class >>
+        steps:
+            - checkout
+            - when:
+                condition:
+                    or:
+                        - equal:
+                            - << parameters.mode >>
+                            - sfw
+                        - equal:
+                            - << parameters.mode >>
+                            - both
+                steps:
+                    - sfw:
+                        app_dir: << parameters.app_dir >>
+                        sfw_command: << parameters.sfw_command >>
+                        sfw_version: << parameters.sfw_version >>
+            - when:
+                condition:
+                    or:
+                        - equal:
+                            - << parameters.mode >>
+                            - ci
+                        - equal:
+                            - << parameters.mode >>
+                            - both
+                steps:
+                    - ci:
+                        app_dir: << parameters.app_dir >>
+                        auto_manifest: << parameters.auto_manifest >>
+                        cli_version: << parameters.cli_version >>
+                        extra_args: << parameters.extra_args >>
+                        org_slug: << parameters.org_slug >>
+examples:
+    basic:
+        description: |
+            Run the `scan` job with credentials supplied through a Context.
+        usage:
+            version: "2.1"
+            orbs:
+                socket: gathertown/socket@1.0.0
+            workflows:
+                supply-chain:
+                    jobs:
+                        - socket/scan:
+                            context: socket-dev-credentials
+    scan-both:
+        description: |
+            Run installs through Socket Firewall then `socket ci`. Set `SOCKET_CLI_API_TOKEN` for the policy scan; `sfw` itself does not require a token.
+        usage:
+            version: "2.1"
+            orbs:
+                socket: gathertown/socket@1.0.0
+            workflows:
+                supply-chain:
+                    jobs:
+                        - socket/scan:
+                            context: socket-dev-credentials
+                            mode: both
+    scan-sfw-only:
+        description: |
+            Socket Firewall only: proxy package manager traffic without `socket ci` (no API token).
+        usage:
+            version: "2.1"
+            orbs:
+                socket: gathertown/socket@1.0.0
+            workflows:
+                install:
+                    jobs:
+                        - socket/scan:
+                            mode: sfw
+                            sfw_command: yarn install --frozen-lockfile
+

@@ -1,12 +1,21 @@
 description: >
-  Check out the repository and run Socket CI. Configure the Socket API token as
-  `SOCKET_CLI_API_TOKEN` on the project or via a Context.
+  Check out the repository and run Socket protection according to `mode`:
+  `socket ci` only, Socket Firewall (`sfw`) only, or both (sfw then `socket ci`).
+  For `ci` and `both`, configure `SOCKET_CLI_API_TOKEN` on the project or via a Context.
 
 executor:
   name: default
   tag: << parameters.node_tag >>
 
 parameters:
+  mode:
+    type: enum
+    enum: [ci, sfw, both]
+    default: ci
+    description: >
+      `ci`: run `socket ci` only (requires SOCKET_CLI_API_TOKEN). `sfw`: run the
+      package manager through Socket Firewall only (no token). `both`: run sfw
+      then `socket ci`.
   node_tag:
     type: string
     default: current
@@ -32,14 +41,39 @@ parameters:
   extra_args:
     type: string
     default: ""
+  sfw_version:
+    type: string
+    default: latest
+    description: npm `sfw` package version or tag for npx (when mode is `sfw` or `both`).
+  sfw_command:
+    type: string
+    default: "yarn install --frozen-lockfile"
+    description: >
+      Command passed to `sfw` after `npx` (when mode is `sfw` or `both`).
 
 resource_class: << parameters.resource_class >>
 
 steps:
   - checkout
-  - ci:
-      cli_version: << parameters.cli_version >>
-      auto_manifest: << parameters.auto_manifest >>
-      app_dir: << parameters.app_dir >>
-      org_slug: << parameters.org_slug >>
-      extra_args: << parameters.extra_args >>
+  - when:
+      condition:
+        or:
+          - equal: [<< parameters.mode >>, sfw]
+          - equal: [<< parameters.mode >>, both]
+      steps:
+        - sfw:
+            sfw_version: << parameters.sfw_version >>
+            app_dir: << parameters.app_dir >>
+            sfw_command: << parameters.sfw_command >>
+  - when:
+      condition:
+        or:
+          - equal: [<< parameters.mode >>, ci]
+          - equal: [<< parameters.mode >>, both]
+      steps:
+        - ci:
+            cli_version: << parameters.cli_version >>
+            auto_manifest: << parameters.auto_manifest >>
+            app_dir: << parameters.app_dir >>
+            org_slug: << parameters.org_slug >>
+            extra_args: << parameters.extra_args >>

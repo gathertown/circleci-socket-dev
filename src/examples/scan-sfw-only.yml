@@ -1,0 +1,13 @@
+description: >
+  Socket Firewall only: proxy package manager traffic without `socket ci` (no API token).
+
+usage:
+  version: 2.1
+  orbs:
+    socket: gathertown/socket@1.0.0
+  workflows:
+    install:
+      jobs:
+        - socket/scan:
+            mode: sfw
+            sfw_command: yarn install --frozen-lockfile

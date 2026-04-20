@@ -1,10 +1,10 @@
 version: 2.1
 
 description: >
-  Run Socket.dev dependency and supply-chain policy checks in CircleCI using the
-  official Socket CLI (`socket ci`). Authenticate with `SOCKET_CLI_API_TOKEN`
-  (create a CI/CD API token per
-  https://docs.socket.dev/docs/create-socket-api-key-for-cicd).
+  Run Socket.dev checks in CircleCI: policy enforcement via the official Socket CLI
+  (`socket ci`), network filtering via Socket Firewall Free (`sfw` through npx), or
+  both. Use `SOCKET_CLI_API_TOKEN` when running `socket ci` (create a CI/CD API token per
+  https://docs.socket.dev/docs/create-socket-api-key-for-cicd). `sfw` does not require a token.
 
 display:
   home_url: "https://socket.dev"

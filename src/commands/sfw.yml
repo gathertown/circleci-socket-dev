@@ -1,0 +1,28 @@
+description: >
+  Run a package manager command through Socket Firewall Free (`sfw`) via npx.
+  No API token is required. Prefixes the given command with the `sfw` binary so
+  registry traffic is filtered (see https://docs.socket.dev/docs/socket-firewall-free).
+
+parameters:
+  sfw_version:
+    type: string
+    default: latest
+    description: Version or dist-tag of the npm `sfw` package (e.g. latest, 2.0.4).
+  app_dir:
+    type: string
+    default: .
+    description: Working directory for the command (relative to the checkout root).
+  sfw_command:
+    type: string
+    default: "yarn install --frozen-lockfile"
+    description: >
+      Full command after `npx … sfw@<version>` (e.g. `yarn install --frozen-lockfile`,
+      `npm ci`, `pnpm install --frozen-lockfile`).
+
+steps:
+  - run:
+      name: Socket Firewall (sfw)
+      working_directory: << parameters.app_dir >>
+      command: |
+        set -euo pipefail
+        npx --yes sfw@<< parameters.sfw_version >> << parameters.sfw_command >>
