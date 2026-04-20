@@ -73,7 +73,7 @@ steps:
       # All dynamic values via env: included scripts must not contain `<< parameters.* >>`
       # or bash may treat `<<` as a heredoc when substitution fails or ordering differs.
       environment:
-        SFW_COMMAND: << parameters.sfw_command >>
+        ORB_SFW_COMMAND: << parameters.sfw_command >>
         ORB_SFW_EDITION: << parameters.sfw_edition >>
         ORB_SFW_VERSION: << parameters.sfw_version >>
         ORB_SFW_ENTERPRISE_VERSION: << parameters.sfw_enterprise_version >>
