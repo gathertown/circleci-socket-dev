@@ -1,0 +1,15 @@
+version: 2.1
+
+orbs:
+  orb-tools: circleci/orb-tools@12.1.0
+
+workflows:
+  lint-pack:
+    jobs:
+      - orb-tools/lint:
+          source_dir: src
+      - orb-tools/pack:
+          source_dir: src
+          orb_dir: dist
+          orb_file_name: orb.yml
+          persist_to_workspace: false
