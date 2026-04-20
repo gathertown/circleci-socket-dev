@@ -304,7 +304,7 @@ examples:
         usage:
             version: "2.1"
             orbs:
-                socket: gathertown/socket@1.0.0
+                socket: gathertown/socket@0.0.1
             workflows:
                 supply-chain:
                     jobs:
@@ -317,7 +317,7 @@ examples:
         usage:
             version: "2.1"
             orbs:
-                socket: gathertown/socket@1.0.0
+                socket: gathertown/socket@0.0.1
             workflows:
                 supply-chain:
                     jobs:
@@ -331,7 +331,7 @@ examples:
         usage:
             version: "2.1"
             orbs:
-                socket: gathertown/socket@1.0.0
+                socket: gathertown/socket@0.0.1
             workflows:
                 install:
                     jobs:
@@ -344,7 +344,7 @@ examples:
         usage:
             version: "2.1"
             orbs:
-                socket: gathertown/socket@1.0.0
+                socket: gathertown/socket@0.0.1
             workflows:
                 supply-chain:
                     jobs:
