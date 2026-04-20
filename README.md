@@ -261,6 +261,26 @@ circleci orb validate orb.yml
 
 Publish `orb.yml` to the `gathertown` namespace with the CircleCI CLI or your release process. Update `display.source_url` in `src/@orb.yml` if the canonical Git repository URL changes.
 
+**CI in this repo:** [`.circleci/config.yml`](.circleci/config.yml) runs lint, pack, review, and continues to [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml) (pack/validate test + publish on SemVer **git tags**). Enable [**dynamic configuration / setup workflows**](https://circleci.com/docs/pipelines/#dynamic-configuration) on the CircleCI project if prompted.
+
+### Publish `gathertown/socket` from CircleCI (one-time setup)
+
+Publishing is triggered only on tags like `v1.0.0` by [`orb-tools/publish`](https://circleci.com/developer/orbs/orb/circleci/orb-tools#jobs-publish) in [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml). The job uses **`context: orb-publishing`**. Configure that Context in the **gathertown** CircleCI organization:
+
+1. **Create a Context**  
+   In CircleCI: **Organization Settings** → **Contexts** → **Create Context** → name it **`orb-publishing`**. Optionally restrict which security groups may use it.
+
+2. **Add a Personal API Token**  
+   In the Context, add an environment variable **`CIRCLE_TOKEN`**. Its value must be a [**Personal API Token**](https://circleci.com/docs/managing-api-tokens/) for a user who is allowed to publish orbs to the **`gathertown`** namespace (see [Orb publishing](https://circleci.com/docs/orbs/author/publish-orbs/)).
+
+3. **Attach the Context to the pipeline**  
+   The workflow already references `context: orb-publishing` on the publish job. Ensure this GitHub repository’s CircleCI **project** belongs to the **gathertown** org so that job can read the Context.
+
+4. **Release**  
+   Push a SemVer tag (for example `v1.0.0`). The `test-deploy` workflow should pack the orb and publish **`gathertown/socket@1.0.0`** to the registry.
+
+If you rename the Context or the token variable, update [`.circleci/test-deploy.yml`](.circleci/test-deploy.yml) accordingly (`orb-tools/publish` accepts a `circleci_token` parameter if you need a different env var name).
+
 ## Troubleshooting
 
 | Issue | What to check |

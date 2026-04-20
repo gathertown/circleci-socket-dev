@@ -1,2 +1,5 @@
-# Ignore .envrc file
+# Packed orb (generate with: circleci orb pack src > orb.yml)
+orb.yml
+.DS_Store
+# Local direnv (may reference private token helpers)
 .envrc

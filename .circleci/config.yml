@@ -1,15 +1,24 @@
 version: 2.1
-
+setup: true
 orbs:
-  orb-tools: circleci/orb-tools@12.1.0
+  orb-tools: circleci/orb-tools@12.3
+filters: &filters
+  tags:
+    only: /.*/
 
 workflows:
   lint-pack:
     jobs:
       - orb-tools/lint:
-          source_dir: src
+          filters: *filters
       - orb-tools/pack:
-          source_dir: src
-          orb_dir: dist
-          orb_file_name: orb.yml
-          persist_to_workspace: false
+          filters: *filters
+      - orb-tools/review:
+          orb_name: socket
+          filters: *filters
+      - orb-tools/continue:
+          pipeline_number: << pipeline.number >>
+          vcs_type: << pipeline.project.type >>
+          orb_name: socket
+          requires: [orb-tools/lint, orb-tools/pack, orb-tools/review]
+          filters: *filters
