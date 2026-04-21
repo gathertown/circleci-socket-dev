@@ -3,6 +3,15 @@ set -euo pipefail
 # `<< parameters.* >>` in this file (bash would treat `<<` as a heredoc when
 # CircleCI substitution does not run as expected inside <<include()>>).
 
+# CircleCI may pass boolean orb parameters into `environment` as "true"/"false" or
+# "1"/"0" (see reusable config docs). Match all common truthy/falsy forms.
+orb_bool_true() {
+  case "${1:-}" in
+    true|True|TRUE|1|yes|Yes|YES|on|On|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 EDITION="${ORB_SFW_EDITION:-free}"
 if [ "$EDITION" = "enterprise" ]; then
   if [ -z "${SOCKET_API_KEY:-}" ] && [ ! -f .sfw.config ]; then
@@ -10,7 +19,7 @@ if [ "$EDITION" = "enterprise" ]; then
     echo "See https://docs.socket.dev/docs/socket-firewall-enterprise-wrapper-mode" >&2
     exit 1
   fi
-  if [ "${ORB_SFW_CONFIG_RELATIVE_PATHS:-false}" = "true" ]; then
+  if orb_bool_true "${ORB_SFW_CONFIG_RELATIVE_PATHS:-false}"; then
     export SFW_CONFIG_RELATIVE_PATHS=true
   fi
   if [ -n "${ORB_SFW_CUSTOM_REGISTRIES:-}" ]; then
@@ -19,15 +28,15 @@ if [ "$EDITION" = "enterprise" ]; then
   if [ -n "${ORB_SFW_UNKNOWN_HOST_ACTION:-}" ]; then
     export SFW_UNKNOWN_HOST_ACTION="${ORB_SFW_UNKNOWN_HOST_ACTION}"
   fi
-  if [ "${ORB_SFW_TELEMETRY_DISABLED:-false}" = "true" ]; then
+  if orb_bool_true "${ORB_SFW_TELEMETRY_DISABLED:-false}"; then
     export SFW_TELEMETRY_DISABLED=true
   fi
-  if [ "${ORB_SFW_DEBUG:-false}" = "true" ]; then
+  if orb_bool_true "${ORB_SFW_DEBUG:-false}"; then
     export SFW_DEBUG=true
   fi
   ARCH=$(uname -m)
   MUSL="${ORB_SFW_ENTERPRISE_MUSL:-false}"
-  if [ "$MUSL" = "true" ]; then
+  if orb_bool_true "$MUSL"; then
     case "$ARCH" in
       x86_64) BIN=sfw-musl-linux-x86_64 ;;
       aarch64) BIN=sfw-musl-linux-arm64 ;;
