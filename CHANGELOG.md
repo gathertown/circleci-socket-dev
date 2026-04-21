@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3] - 2026-04-21
+
+### Fixed
+
+- **`socket/sfw` (Enterprise):** Boolean orb parameters passed into the run step `environment` block are stringified by CircleCI and may appear as `True`, `TRUE`, `1`, etc., not only lowercase `true`. `src/scripts/run_sfw.sh` previously compared values strictly to `true`, so flags such as `sfw_config_relative_paths`, `sfw_telemetry_disabled`, `sfw_debug`, and `sfw_enterprise_musl` could be ignored. Parsing now uses a small `orb_bool_true` helper that accepts common truthy/falsy forms.
+
+**Upgrade:** Consumers who need this behavior should pin **`gathertown/socket@0.0.3`** or later.
+
 ## [0.0.2] - 2026-04-21
 
 ### Fixed
